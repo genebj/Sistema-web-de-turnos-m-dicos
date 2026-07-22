@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MediTurno &mdash; Sistema de Turnos Médicos</title>
+<meta name="description" content="Sistema web para registrar pacientes, asignar turnos médicos y consultar la fila de espera por especialidad.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div class="cross-marker" aria-hidden="true"></div>
+
+<header class="site-header">
+  <div class="header-inner">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 40 40" width="30" height="30">
+          <rect x="16" y="4" width="8" height="32" rx="2" fill="currentColor"/>
+          <rect x="4" y="16" width="32" height="8" ry="2" rx="2" fill="currentColor"/>
+        </svg>
+      </span>
+      <div class="brand-text">
+        <p class="brand-name">MediTurno</p>
+        <p class="brand-sub">Centro de Salud Integral</p>
+      </div>
+    </div>
+    <div class="header-status">
+      <p class="header-date" id="headerDate">&mdash;</p>
+      <p class="header-clock" id="headerClock">--:--</p>
+    </div>
+  </div>
+  <nav class="tab-nav" aria-label="Secciones del sistema">
+    <button class="tab-btn is-active" data-tab="registro" role="tab" aria-selected="true">
+      <span class="tab-num">01</span> Registrar paciente
+    </button>
+    <button class="tab-btn" data-tab="asignar" role="tab" aria-selected="false">
+      <span class="tab-num">02</span> Asignar turno
+    </button>
+    <button class="tab-btn" data-tab="fila" role="tab" aria-selected="false">
+      <span class="tab-num">03</span> Turnos pendientes
+    </button>
+  </nav>
+</header>
+
+<main class="app-main">
+
+  <!-- ===================== INTRO / SIGNATURE ===================== -->
+  <section class="intro-strip" aria-hidden="true">
+    <div class="ticket-roll">
+      <span class="ticket-roll-label">Dispensador de turnos</span>
+      <div class="ticket-roll-stub">
+        <span class="stub-number" id="nextGlobalNumber">000</span>
+        <span class="stub-caption">próximo número</span>
+      </div>
+    </div>
+    <p class="intro-copy">Registre al paciente, asigne su especialidad y hora, y siga la fila en tiempo real. Sin filas físicas, sin papeles perdidos.</p>
+  </section>
+
+  <!-- ===================== TAB 1: REGISTRO ===================== -->
+  <section class="tab-panel is-active" id="panel-registro" role="tabpanel">
+    <div class="panel-grid">
+      <div class="panel-col">
+        <h2 class="panel-title">Registrar paciente</h2>
+        <p class="panel-hint">Todo paciente debe estar registrado antes de recibir un turno. Los campos marcados con <span class="req">*</span> son obligatorios.</p>
+
+        <form id="formPaciente" class="med-form" novalidate>
+          <div class="field">
+            <label for="pNombre">Nombre completo <span class="req">*</span></label>
+            <input type="text" id="pNombre" name="pNombre" autocomplete="name" placeholder="Ej. Genesis Batista Jerez" required>
+            <p class="field-error" id="err-pNombre" role="alert"></p>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label for="pCedula">Cédula <span class="req">*</span></label>
+              <input type="text" id="pCedula" name="pCedula" inputmode="numeric" placeholder="000-0000000-0" maxlength="13" required>
+              <p class="field-error" id="err-pCedula" role="alert"></p>
+            </div>
+            <div class="field">
+              <label for="pTelefono">Teléfono <span class="req">*</span></label>
+              <input type="text" id="pTelefono" name="pTelefono" inputmode="numeric" placeholder="000-000-0000" maxlength="12" required>
+              <p class="field-error" id="err-pTelefono" role="alert"></p>
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label for="pNacimiento">Fecha de nacimiento <span class="req">*</span></label>
+              <input type="date" id="pNacimiento" name="pNacimiento" required>
+              <p class="field-error" id="err-pNacimiento" role="alert"></p>
+            </div>
+            <div class="field">
+              <label for="pSexo">Sexo <span class="req">*</span></label>
+              <select id="pSexo" name="pSexo" required>
+                <option value="" disabled selected>Seleccione&hellip;</option>
+                <option value="F">Femenino</option>
+                <option value="M">Masculino</option>
+              </select>
+              <p class="field-error" id="err-pSexo" role="alert"></p>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="pSeguro">Seguro médico (opcional)</label>
+            <input type="text" id="pSeguro" name="pSeguro" placeholder="Ej. SENASA, ARS Humano, Ninguno">
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Registrar paciente</button>
+            <button type="reset" class="btn btn-ghost">Limpiar</button>
+          </div>
+          <p class="form-feedback" id="feedbackPaciente" role="status"></p>
+        </form>
+      </div>
+
+      <div class="panel-col">
+        <h2 class="panel-title">Pacientes registrados</h2>
+        <div class="field">
+          <label for="buscarPaciente">Buscar por nombre o cédula</label>
+          <input type="search" id="buscarPaciente" placeholder="Escriba para filtrar&hellip;">
+        </div>
+        <div class="table-wrap">
+          <table class="data-table" id="tablaPacientes">
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Cédula</th>
+                <th>Teléfono</th>
+                <th>Edad</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="tbodyPacientes"></tbody>
+          </table>
+          <p class="empty-state" id="emptyPacientes">Aún no hay pacientes registrados. Use el formulario para agregar el primero.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== TAB 2: ASIGNAR TURNO ===================== -->
+  <section class="tab-panel" id="panel-asignar" role="tabpanel">
+    <div class="panel-grid">
+      <div class="panel-col">
+        <h2 class="panel-title">Asignar turno</h2>
+        <p class="panel-hint">Seleccione un paciente ya registrado, elija la especialidad y la hora disponible.</p>
+
+        <form id="formTurno" class="med-form" novalidate>
+          <div class="field">
+            <label for="tPaciente">Paciente <span class="req">*</span></label>
+            <select id="tPaciente" name="tPaciente" required>
+              <option value="" disabled selected>Seleccione un paciente&hellip;</option>
+            </select>
+            <p class="field-error" id="err-tPaciente" role="alert"></p>
+          </div>
+
+          <div class="field">
+            <label for="tEspecialidad">Especialidad <span class="req">*</span></label>
+            <select id="tEspecialidad" name="tEspecialidad" required>
+              <option value="" disabled selected>Seleccione una especialidad&hellip;</option>
+            </select>
+            <p class="field-error" id="err-tEspecialidad" role="alert"></p>
+          </div>
+
+          <p class="doctor-preview" id="doctorPreview" hidden>
+            Médico asignado: <strong id="doctorNombre"></strong>
+          </p>
+
+          <div class="field-row">
+            <div class="field">
+              <label for="tFecha">Fecha <span class="req">*</span></label>
+              <input type="date" id="tFecha" name="tFecha" required>
+              <p class="field-error" id="err-tFecha" role="alert"></p>
+            </div>
+            <div class="field">
+              <label for="tHora">Hora disponible <span class="req">*</span></label>
+              <select id="tHora" name="tHora" required disabled>
+                <option value="" selected>Elija fecha y especialidad primero</option>
+              </select>
+              <p class="field-error" id="err-tHora" role="alert"></p>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="tMotivo">Motivo de la consulta (opcional)</label>
+            <textarea id="tMotivo" name="tMotivo" rows="2" placeholder="Ej. Control rutinario, dolor de espalda&hellip;"></textarea>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Confirmar turno</button>
+            <button type="reset" class="btn btn-ghost">Limpiar</button>
+          </div>
+          <p class="form-feedback" id="feedbackTurno" role="status"></p>
+        </form>
+      </div>
+
+      <div class="panel-col">
+        <h2 class="panel-title">Su ticket</h2>
+        <p class="panel-hint" id="ticketHint">Al confirmar un turno, aquí aparecerá el comprobante con el número de fila.</p>
+        <div id="ticketStubHost" class="ticket-stub-host"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== TAB 3: FILA / PENDIENTES ===================== -->
+  <section class="tab-panel" id="panel-fila" role="tabpanel">
+    <div class="stats-row" id="statsRow">
+      <div class="stat-card">
+        <span class="stat-value" id="statPendientes">0</span>
+        <span class="stat-label">Pendientes</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-value" id="statAtendidos">0</span>
+        <span class="stat-label">Atendidos hoy</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-value" id="statCancelados">0</span>
+        <span class="stat-label">Cancelados</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-value" id="statEspera">0 min</span>
+        <span class="stat-label">Espera promedio</span>
+      </div>
+    </div>
+
+    <div class="filter-bar">
+      <div class="field">
+        <label for="filtroBusqueda">Buscar paciente o cédula</label>
+        <input type="search" id="filtroBusqueda" placeholder="Ej. Genesis o 402-1234567-8">
+      </div>
+      <div class="field">
+        <label for="filtroEspecialidad">Especialidad</label>
+        <select id="filtroEspecialidad">
+          <option value="">Todas</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="filtroEstado">Estado</label>
+        <select id="filtroEstado">
+          <option value="">Todos</option>
+          <option value="pendiente">Pendiente</option>
+          <option value="atendido">Atendido</option>
+          <option value="cancelado">Cancelado</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="filtroOrden">Ordenar por</label>
+        <select id="filtroOrden">
+          <option value="hora">Fecha y hora</option>
+          <option value="numero">Número de ticket</option>
+          <option value="nombre">Nombre del paciente</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="queue-list" id="queueList"></div>
+    <p class="empty-state" id="emptyQueue">No hay turnos que coincidan con los filtros seleccionados.</p>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <p>MediTurno &mdash; Proyecto académico de Desarrollo de Soluciones Web. Datos almacenados únicamente en este navegador (localStorage).</p>
+</footer>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="js/app.js"></script>
+</body>
+</html>
